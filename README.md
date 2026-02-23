@@ -8,6 +8,34 @@ A modular web application built with **Python (Flask)** and **Vanilla JavaScript
 
 ...
 
+## 📝 ToDo List (Wish List)
+
+### App Structure
+- [X] Authy module
+- [X] Secure login
+- [X] Session encrypted
+
+### Resource optimization
+- [X] Real time filtering
+- [X] Export CSV file
+- [X] Filter by analysis period
+- [X] Filter by recommendation focus
+- [X] Dynamic pagination
+- [X] Smart visualization
+- [ ] Select by namespace
+- [ ] Select by container
+
+### Cost Repost
+- [X] Smart visualization
+- [ ] Show total cost over the month
+- [ ] List cost models
+- [ ] Show top 5 apps ordered by decreasing cost
+- [ ] Show top 5 clusters ordered by decreasing cost
+- [ ] Show consumption graphs by app
+- [ ] Show consumption graphs by cluster
+
+...
+
 ## 🚀 Features
 
 * **Modular Architecture:** The codebase is split into specific modules (`auth`, `report`, `optimization`) for better maintainability and scalability.

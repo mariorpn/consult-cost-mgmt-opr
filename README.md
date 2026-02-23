@@ -40,7 +40,7 @@ The entry point. Manages user sessions, serves the HTML dashboard (using Bootstr
 ### **auth.py:** 
 Manages the client_id and client_secret, requests a Bearer token from Red Hat SSO, and caches it until it expires to save HTTP requests.
 
-### **openshift_report.py & openshift_optimization.py:** 
+### **openshift_report.py** & **openshift_optimization.py:**
 The API wrappers. They inject the Bearer token into headers and run while loops to fetch all paginated data from Red Hat's endpoints.
 
 ....
@@ -58,8 +58,10 @@ A Red Hat Service Account with a valid Client ID and Client Secret.
 1. Clone or download the repository to your local machine.
 
 2. Open your terminal in the project directory and create a virtual environment:
-```
-# python -m venv venv
+
+command:
+```bash
+python -m venv venv
 ```
 3. **Activate the virtual environment:**
 * Linux/macOS: source venv/bin/activate
@@ -67,7 +69,8 @@ A Red Hat Service Account with a valid Client ID and Client Secret.
 
 4. **Install the dependencies:**
 
-```
+command:
+```bash
 pip install -r requirements.txt
 ```
 5. **Security Configuration (The Flask Secret Key):**
@@ -76,12 +79,14 @@ This application uses Flask Sessions to temporarily store your Red Hat credentia
 **How to generate a strong key:**
 Run the following command in your terminal to let Python generate a highly secure, random hex string:
 
-```
+command:
+```bash
 python -c "import secrets; print(secrets.token_hex(24))"
 ```
 Create a file named .env in the root directory and paste the generated string inside it like this:
 
-```
+command:
+```text
 FLASK_SECRET_KEY=paste_your_generated_hex_string_here
 ```
 **⚠️ CRITICAL:** Never commit the .env file to version control (like GitHub or GitLab). Keep it strictly local.
@@ -91,13 +96,17 @@ FLASK_SECRET_KEY=paste_your_generated_hex_string_here
 ## 💻 Running the App
 
 **Start the Flask server:**
-```
-python app.py
+
+command:
+```bash
+python3 app.py
 ```
 **Open your web browser and navigate to:**
 
+command:
+```text
+URL: http://127.0.0.1:5000
 ```
-[http://127.0.0.1:5000](http://127.0.0.1:5000)
-```
+
 At the login screen, enter your Red Hat Service Account Client ID and Client Secret.
 Once authenticated, use the dashboard buttons to fetch Costs or Optimization data, filter the tables, and export the findings to CSV.

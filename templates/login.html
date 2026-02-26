@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Red Hat Cost Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .login-card { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        .brand { color: #cc0000; font-weight: bold; font-size: 24px; text-align: center; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="brand">Red Hat<br>Cost Management</div>
+        {% if error %}
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+        <form method="POST" action="/login">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Client ID</label>
+                <input type="text" name="client_id" class="form-control" required>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold">Client Secret</label>
+                <input type="password" name="client_secret" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-danger w-100 fw-bold py-2">Login</button>
+        </form>
+    </div>
+</body>
+</html>

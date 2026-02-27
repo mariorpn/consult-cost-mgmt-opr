@@ -11,6 +11,8 @@
         .table-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 20px; overflow-x: auto; }
         .code-block { background-color: #f4f4f4; border: 1px solid #e9ecef; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; margin: 0; white-space: pre-wrap; color: #333; line-height: 1.5; }
         .cost-val { color: #198754; font-weight: bold; font-size: 14px;}
+        .current-block { border-left: 3px solid #0d6efd; }
+        .rec-block { border-left: 3px solid #198754; }
     </style>
 </head>
 <body>
@@ -18,7 +20,6 @@
         <nav class="navbar navbar-light bg-light mb-4 rounded px-3 shadow-sm d-flex justify-content-between">
             <span class="navbar-brand mb-0 h1">Red Hat Cost Management</span>
             <div>
-                <button class="btn btn-outline-secondary btn-sm fw-bold me-2"><i class="bi bi-card-checklist"></i> Tasks</button>
                 <a href="/logout" class="btn btn-outline-danger btn-sm fw-bold">Logout</a>
             </div>
         </nav>
@@ -147,7 +148,6 @@
 
                     if (!isNaN(val)) val = Number(val).toFixed(4);
 
-                    // AQUI: Correção da quebra de linha com apenas um \n
                     if (label) {
                         html += `[${label}]\n  cost: <span class="cost-val">${val} ${unit}</span>\n`;
                         flatLines.push(`[${label}] ${val} ${unit}`);
@@ -166,16 +166,18 @@
 
         function formatRecommendation(rawVal) {
             let flatData = { 
+                c_lim_cpu: '-', c_lim_mem: '-', c_req_cpu: '-', c_req_mem: '-',
                 lim_cpu: '-', lim_cpu_var: '-', lim_mem: '-', lim_mem_var: '-', 
                 req_cpu: '-', req_cpu_var: '-', req_mem: '-', req_mem_var: '-' 
             };
 
+            let errObj = { htmlCurrent: `<pre class="code-block" style="font-size: 11px;">No data</pre>`, htmlRec: `<pre class="code-block" style="font-size: 11px;">No data</pre>`, flat: flatData };
+
             try {
                 let rec = Array.isArray(rawVal) ? rawVal[0] : rawVal;
-                if (!rec || !rec.recommendation_terms) {
-                    return { html: `<pre class="code-block" style="font-size: 11px;">No structured data</pre>`, flat: flatData };
-                }
+                if (!rec) return errObj;
 
+                let current = rec.current || {};
                 let selectTerm = document.getElementById('selectTerm') ? document.getElementById('selectTerm').value : 'long_term';
                 let selectEngine = document.getElementById('selectEngine') ? document.getElementById('selectEngine').value : 'cost';
 
@@ -186,81 +188,110 @@
                 let config = engine.config || {};
                 let variation = engine.variation || {};
 
-                if (Object.keys(config).length === 0) {
-                    return { html: `<pre class="code-block" style="font-size: 11px; color:#666;">No recommendation available for [${selectEngine}] in [${selectTerm}].</pre>`, flat: flatData };
-                }
+                const parseVal = (item) => {
+                    let val = item.amount !== undefined ? item.amount : item;
+                    let fmt = item.format || "";
+                    if (typeof val === 'object' || val === '') return '-';
+                    if (fmt === "bytes") {
+                        return (Number(val) / 1048576).toFixed(2) + "Mi";
+                    }
+                    if (!isNaN(val)) return Number(val).toFixed(3) + fmt;
+                    return val + fmt;
+                };
 
-                const formatLine = (objConfig, objVar, type, flagFlat) => {
+                const parseVar = (item) => {
+                    let vVal = item.amount !== undefined ? item.amount : item;
+                    let vFmt = item.format || "%";
+                    if (typeof vVal === 'object' || vVal === '') return '-';
+                    vFmt = vFmt.replace(/percente?/gi, '%');
+                    if (!isNaN(vVal)) return Number(vVal).toFixed(0) + vFmt;
+                    return vVal + vFmt;
+                };
+
+                const formatLine = (objConfig, objVar, type, flagFlat, isCurrent) => {
                     let valStr = '-';
-                    let varStr = '-';
+                    let varStr = isCurrent ? 'Current' : '-';
 
                     if (objConfig && objConfig[type] !== undefined && objConfig[type] !== null) {
-                        let item = objConfig[type];
-                        let val = item.amount !== undefined ? item.amount : item;
-                        let fmt = item.format || "";
-                        
-                        if (typeof val === 'object' || val === '') {
-                            valStr = '-';
-                        } else {
-                            if (fmt === "bytes") {
-                                val = (Number(val) / 1048576).toFixed(2);
-                                fmt = "Mi";
-                            } else if (!isNaN(val)) { val = Number(val).toFixed(3); }
-                            
-                            valStr = `${val}${fmt}`;
-                        }
+                        valStr = parseVal(objConfig[type]);
                     }
                     
-                    if (objVar && objVar[type] !== undefined && objVar[type] !== null) {
-                        let vItem = objVar[type];
-                        let vVal = vItem.amount !== undefined ? vItem.amount : vItem;
-                        let vFmt = vItem.format || "%";
-                        
-                        if (typeof vVal === 'object' || vVal === '') {
-                            varStr = '-';
-                        } else {
-                            vFmt = vFmt.replace(/percente?/gi, '%');
-                            if (!isNaN(vVal)) vVal = Number(vVal).toFixed(0);
-                            varStr = `${vVal}${vFmt}`;
-                        }
+                    if (!isCurrent && objVar && objVar[type] !== undefined && objVar[type] !== null) {
+                        varStr = parseVar(objVar[type]);
                     }
+
+                    if(flagFlat === 'c_limit_cpu') flatData.c_lim_cpu = valStr;
+                    if(flagFlat === 'c_limit_mem') flatData.c_lim_mem = valStr;
+                    if(flagFlat === 'c_req_cpu') flatData.c_req_cpu = valStr;
+                    if(flagFlat === 'c_req_mem') flatData.c_req_mem = valStr;
 
                     if(flagFlat === 'limit_cpu') { flatData.lim_cpu = valStr; flatData.lim_cpu_var = varStr; }
                     if(flagFlat === 'limit_mem') { flatData.lim_mem = valStr; flatData.lim_mem_var = varStr; }
                     if(flagFlat === 'req_cpu') { flatData.req_cpu = valStr; flatData.req_cpu_var = varStr; }
                     if(flagFlat === 'req_mem') { flatData.req_mem = valStr; flatData.req_mem_var = varStr; }
 
-                    // AQUI: Correção da quebra de linha com apenas um \n
                     return `  ${type}: ${valStr.padEnd(12)} # ${varStr}\n`;
                 };
 
-                let html = `<pre class="code-block">`;
-                
-                if (config.limits) {
-                    html += `limits:\n`; // AQUI
-                    html += formatLine(config.limits, variation.limits, 'cpu', 'limit_cpu');
-                    html += formatLine(config.limits, variation.limits, 'memory', 'limit_mem');
+                // Monta a coluna CURRENT
+                let htmlCurrent = `<pre class="code-block current-block">`;
+                if (current.limits || current.requests) {
+                    if (current.limits) {
+                        htmlCurrent += `limits:\n`;
+                        htmlCurrent += formatLine(current.limits, null, 'cpu', 'c_limit_cpu', true);
+                        htmlCurrent += formatLine(current.limits, null, 'memory', 'c_limit_mem', true);
+                    }
+                    if (current.requests) {
+                        htmlCurrent += `requests:\n`;
+                        htmlCurrent += formatLine(current.requests, null, 'cpu', 'c_req_cpu', true);
+                        htmlCurrent += formatLine(current.requests, null, 'memory', 'c_req_mem', true);
+                    }
+                } else {
+                    htmlCurrent += `<span style="color:#666;">No current data</span>`;
                 }
-                if (config.requests) {
-                    html += `requests:\n`; // AQUI
-                    html += formatLine(config.requests, variation.requests, 'cpu', 'req_cpu');
-                    html += formatLine(config.requests, variation.requests, 'memory', 'req_mem');
+                htmlCurrent += `</pre>`;
+
+                // Monta a coluna RECOMMENDED
+                let htmlRec = `<pre class="code-block rec-block">`;
+                if (Object.keys(config).length === 0) {
+                    htmlRec += `<span style="color:#666;">No recommendation for [${selectEngine}] in [${selectTerm}].</span>`;
+                } else {
+                    if (config.limits) {
+                        htmlRec += `limits:\n`;
+                        htmlRec += formatLine(config.limits, variation.limits, 'cpu', 'limit_cpu', false);
+                        htmlRec += formatLine(config.limits, variation.limits, 'memory', 'limit_mem', false);
+                    }
+                    if (config.requests) {
+                        htmlRec += `requests:\n`;
+                        htmlRec += formatLine(config.requests, variation.requests, 'cpu', 'req_cpu', false);
+                        htmlRec += formatLine(config.requests, variation.requests, 'memory', 'req_mem', false);
+                    }
                 }
-                html += `</pre>`;
+                htmlRec += `</pre>`;
                 
-                return { html: html, flat: flatData };
+                return { htmlCurrent: htmlCurrent, htmlRec: htmlRec, flat: flatData };
             } catch (e) {
-                return { html: `<pre class="code-block" style="font-size: 11px;">Format error</pre>`, flat: flatData };
+                return errObj;
             }
         }
 
         function generateTable(objectList, tableId) {
             let keys = Object.keys(objectList[0]);
             let html = `<table id="table-${tableId}" class="table table-striped table-bordered table-hover table-sm text-start align-middle">`;
+            
+            // CABEÇALHO DA TABELA
             html += '<thead class="table-dark"><tr>';
-            keys.forEach(key => { html += `<th>${key.toUpperCase()}</th>`; });
+            keys.forEach(key => {
+                if (key.toLowerCase().includes('recommendation')) {
+                    html += `<th class="text-primary">CURRENT RESOURCES</th>`;
+                    html += `<th class="text-success">RECOMMENDATIONS</th>`;
+                } else {
+                    html += `<th>${key.toUpperCase()}</th>`;
+                }
+            });
             html += '</tr></thead><tbody>';
 
+            // CORPO DA TABELA
             objectList.forEach(obj => {
                 html += '<tr>';
                 keys.forEach(key => {
@@ -269,13 +300,22 @@
                     
                     if (k.includes('recommendation')) {
                         let result = formatRecommendation(val);
+                        
+                        // Coluna 1: Current
+                        html += `<td 
+                            data-is-current="true"
+                            data-clc="${result.flat.c_lim_cpu}" data-clm="${result.flat.c_lim_mem}"
+                            data-crc="${result.flat.c_req_cpu}" data-crm="${result.flat.c_req_mem}"
+                        >${result.htmlCurrent}</td>`;
+
+                        // Coluna 2: Recommended
                         html += `<td 
                             data-is-rec="true"
                             data-lc="${result.flat.lim_cpu}" data-lcv="${result.flat.lim_cpu_var}"
                             data-lm="${result.flat.lim_mem}" data-lmv="${result.flat.lim_mem_var}"
                             data-rc="${result.flat.req_cpu}" data-rcv="${result.flat.req_cpu_var}"
                             data-rm="${result.flat.req_mem}" data-rmv="${result.flat.req_mem_var}"
-                        >${result.html}</td>`;
+                        >${result.htmlRec}</td>`;
                         
                     } else if (k === 'values' && currentReportType === 'openshift_costs') {
                         let resultCost = formatCostValues(val);
@@ -318,12 +358,23 @@
             let rows = activeTable.querySelectorAll("tr");
             let headers = [];
             let ths = rows[0].querySelectorAll("th");
+            
+            let currentIndex = -1;
             let recommendationIndex = -1;
 
+            // Extrai os cabeçalhos considerando as duas colunas novas
             for (let j = 0; j < ths.length; j++) {
-                if (ths[j].innerText.toUpperCase().includes('RECOMMENDATION')) {
+                let thText = ths[j].innerText.toUpperCase();
+                
+                if (thText.includes('CURRENT RESOURCES')) {
+                    currentIndex = j;
+                    headers.push('"current.limits.cpu"','"current.limits.memory"','"current.requests.cpu"','"current.requests.memory"');
+                } else if (thText.includes('RECOMMENDATION')) {
                     recommendationIndex = j;
-                    headers.push('"limits.cpu"','"limits.cpu (%)"','"limits.memory"','"limits.memory (%)"','"requests.cpu"','"requests.cpu (%)"','"requests.memory"','"requests.memory (%)"');
+                    headers.push(
+                        '"rec.limits.cpu"','"rec.limits.cpu (%)"','"rec.limits.memory"','"rec.limits.memory (%)"',
+                        '"rec.requests.cpu"','"rec.requests.cpu (%)"','"rec.requests.memory"','"rec.requests.memory (%)"'
+                    );
                 } else {
                     headers.push('"' + ths[j].innerText.replace(/"/g, '""') + '"');
                 }
@@ -337,7 +388,13 @@
                 let cols = rows[i].querySelectorAll("td");
                 
                 for (let j = 0; j < cols.length; j++) {
-                    if (j === recommendationIndex && cols[j].getAttribute("data-is-rec") === "true") {
+                    if (j === currentIndex && cols[j].getAttribute("data-is-current") === "true") {
+                        rowData.push('"' + (cols[j].getAttribute("data-clc") || '') + '"');
+                        rowData.push('"' + (cols[j].getAttribute("data-clm") || '') + '"');
+                        rowData.push('"' + (cols[j].getAttribute("data-crc") || '') + '"');
+                        rowData.push('"' + (cols[j].getAttribute("data-crm") || '') + '"');
+                        
+                    } else if (j === recommendationIndex && cols[j].getAttribute("data-is-rec") === "true") {
                         rowData.push('"' + (cols[j].getAttribute("data-lc") || '') + '"');
                         rowData.push('"' + (cols[j].getAttribute("data-lcv") || '') + '"');
                         rowData.push('"' + (cols[j].getAttribute("data-lm") || '') + '"');
@@ -358,7 +415,7 @@
             }
 
             let universalBOM = "\uFEFF";
-            let csvString = csv.join("\n"); // AQUI: Correção da quebra de linha do CSV
+            let csvString = csv.join("\n");
             let blob = new Blob([universalBOM + csvString], { type: 'text/csv;charset=utf-8;' });
             let link = document.createElement("a");
             
@@ -381,3 +438,4 @@
     </script>
 </body>
 </html>
+

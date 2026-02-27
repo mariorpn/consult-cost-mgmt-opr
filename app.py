@@ -12,10 +12,6 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "default_super_secret_key")
 
-# ==========================================
-# ROTAS DA APLICAÇÃO
-# ==========================================
-
 def get_managers():
     client_id = session.get('client_id')
     client_secret = session.get('client_secret')
@@ -38,7 +34,6 @@ def login():
                 session['client_secret'] = client_secret
                 return redirect(url_for('index'))
             except Exception as e:
-                # Agora chamamos o arquivo .html direto da pasta templates
                 return render_template('login.html', error="Authentication failed. Please check your credentials.")
                 
     return render_template('login.html', error=None)
@@ -52,7 +47,6 @@ def logout():
 def index():
     if 'client_id' not in session or 'client_secret' not in session:
         return redirect(url_for('login'))
-    # O Flask procura automaticamente o arquivo 'dashboard.html' dentro da pasta 'templates'
     return render_template('dashboard.html')
 
 @app.route('/api/openshift-costs', methods=['GET'])
@@ -77,4 +71,3 @@ def api_openshift_optimization():
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=False)
-
